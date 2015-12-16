@@ -1,0 +1,51 @@
+#!/usr/bin/perl -w
+#
+# create_phpbb_users.pl
+#
+# Script reads comma-separated username and encrypted password from
+# a file and creates profiles in phpbb messageboard via insertion 
+# into mysql database.
+#
+# jhearn, 4/5/07
+
+use strict;
+use DBI;
+
+die("No file specified. See usage notes.\n") unless($ARGV[0]);
+open(USERPASS,$ARGV[0])||die("Cannot open file: $!");
+
+my ($username,$password,$id)=('','',0);
+
+my $database='phpbb';
+my $db_host='improv.ac.hmc.edu';
+my $db_user='root';
+my $db_pass='tribute7';
+my $db_table='phpbb_users';
+#my %attr => (PrintError => 1, RaiseError => 1);
+
+my $dbh=DBI->connect("dbi:mysql:dbname=$database:$db_host", "$db_user",
+		     "$db_pass") or die("Error: $DBI::errstr");
+
+# user_id is the table's primary key, so we get the 
+# max to insert uniquely at the end of the table. 
+my $sql="SELECT MAX(user_id) FROM $db_table";
+my $sth=$dbh->prepare($sql);
+$sth->execute;
+my $record=$sth->fetch;
+$id="@$record";
+$sth->finish;
+
+while(<USERPASS>) {
+  chomp;
+  ($username, $password)=($1,$2) if (/(\w+),(\w+)/);
+  $id++;
+  $sql="INSERT INTO $db_table (user_id, username, user_password) 
+        VALUES ('$id', '$username', '$password')";
+  $sth=$dbh->prepare_cached($sql);
+  $sth->execute;
+}
+
+$sth->finish;
+$dbh->disconnect;
+close(USERPASS);
+exit;

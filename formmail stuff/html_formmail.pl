@@ -1,0 +1,432 @@
+#!/usr/bin/perl
+
+##############################################################################
+# html_formmail.pl (Code Sample Version)                                     #
+#                                                                            #
+# Modified from FormMail by Matt Wright (original copyright included below,  #
+# as per original author's request) for use by the Human Resources Dept. at  #
+# Harvey Mudd College.                                                       #
+#                                                                            #
+# The original FormMail sends an email containing the form-field values of a #
+# web form whenever a user makes a sumbission.  In the original version,     #
+# the email came in the form of a text-based summary of the submitted values.#
+# The HR Dept. wanted to be able to print out a copy of the web-form with    #
+# values filled in whenever a submission was received.  I modified FormMail  #
+# to use the referrer address to obtain the original HTML from the web-form, #
+# insert the submitted values, and send an HTML email as desired.            #
+#                                                                            #
+# The script has not been tested with any form other than the one in use by  #
+# the HR Dept. at Harvey Mudd, but it should be compatible with any static,  #
+# unrestricted CGI with no more than trivial modification (e.g. default      #
+# variable values).                                                          #
+#                                                                            #
+# NOTE TO POTENTIAL EMPLOYERS:                                               #
+# In order to distinguish my code from that of the original author, please   #
+# run a Diff to compare this document with the original FormMail.pl          #
+# available at:                                                              #
+#                                                                            #
+# http://www.scriptarchive.com/download.cgi?s=formmail&c=txt&f=FormMail%2Epl #
+#                                                                            #
+# John Hearn                                                                 #
+# May, 2007                                                                  #
+#                                                                            #
+##############################################################################
+# FormMail                        Version 1.92                               #
+# Copyright 1995-2002 Matt Wright mattw@scriptarchive.com                  #
+# Created 06/09/95                Last Modified 04/21/02                     #
+# Matt's Script Archive, Inc.:    http://www.scriptarchive.com/              #
+##############################################################################
+# COPYRIGHT NOTICE                                                           #
+# Copyright 1995-2002 Matthew M. Wright  All Rights Reserved.                #
+#                                                                            #
+# FormMail may be used and modified free of charge by anyone so long as this #
+# copyright notice and the comments above remain intact.  By using this      #
+# code you agree to indemnify Matthew M. Wright from any liability that      #
+# might arise from its use.                                                  #
+#                                                                            #
+# Selling the code for this program without prior written consent is         #
+# expressly forbidden.  In other words, please ask first before you try and  #
+# make money off of my program.                                              #
+#                                                                            #
+# Obtain permission before redistributing this software over the Internet or #
+# in any other medium. In all cases copyright and header must remain intact. #
+##############################################################################
+# ACCESS CONTROL FIX: Peter D. Thompson Yezek                                #
+#                     http://www.securityfocus.com/archive/1/62033           #
+##############################################################################
+
+
+# To avoid Internal Server Error in weird cases, print this first thing:
+print "Content-type:text/html\n\n";
+
+use strict;
+use LWP::Simple;
+# define the subclass
+package MyParse;
+use base "HTML::Parser";
+
+# Redirect complaints from sendmail to /dev/null,
+# so we can output an easier to understand error message.
+my $mailprog = '/usr/lib/sendmail -i -t &>/dev/null';
+#my $mailprog = '/usr/lib/sendmail -i -t';
+my @referers = ('hmc.edu','134.173.32.59');
+my ($recipient, $email, $subject) = ("Administrator", "nobody\@nowhere.edu", "WWW Form Submission");
+my ($cc_recipient, $cc_email) = ("", "");
+my (%Form, $date, $required_fields, @Required);
+#$ENV{'HTTP_REFERER'} = "http://www.hmc.edu/test/staffemployment.html";
+#$ENV{'REQUEST_METHOD'} = "POST";
+my $url = $ENV{'HTTP_REFERER'};
+my $html = LWP::Simple::get($url);
+
+open(MAIL,"|$mailprog");
+# open(MAIL, "|cat > /tmp/output.txt");
+
+#print MAIL "Hello, World!\n";
+
+sub check_url {
+  # determines if user is valid.
+  my $check_referer = 0;
+  
+  # make sure that a valid referring URL was passed
+  if ($ENV{'HTTP_REFERER'}) {
+    foreach my $referer (@referers) {
+      if ($ENV{'HTTP_REFERER'} =~ m|https?://([^/]*)$referer|i) {
+	$check_referer = 1;
+	last;
+      }
+    }
+  }
+  
+  # HTTP_REFERER invalid, throw error.
+  if ($check_referer != 1) { &error('bad_referer') }
+}
+
+sub get_date {
+  # Define arrays for the day of the week and month of the year.
+  my @days   = ('Sunday','Monday','Tuesday','Wednesday',
+	     'Thursday','Friday','Saturday');
+  my @months = ('January','February','March','April','May','June','July',
+	     'August','September','October','November','December');
+  
+  # Get the current time and format the hour, minutes and seconds.
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday) = (localtime(time))[0,1,2,3,4,5,6];
+  my $time = sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+
+  # Add 1900 to get 4 digit year.
+  $year += 1900;
+  
+  # Format the date.
+  $date = "$days[$wday], $months[$mon] $mday, $year at $time";
+  
+}
+
+sub process_form {
+  # Determine REQUEST_METHOD (GET or POST) and split fields into
+  # name-value pairs.  Otherwise, throw error.
+
+  my (@pairs, @Field_Order, @Env_Report, @temp_array);
+  
+  if ($ENV{'REQUEST_METHOD'} eq 'GET') {
+    # Split the name-value pairs
+    @pairs = split(/&/, $ENV{'QUERY_STRING'});
+    print "QUERY STRING is: $ENV{'QUERY_STRING'}\n";
+  }
+  elsif ($ENV{'REQUEST_METHOD'} eq 'POST') {
+    # Get the input
+    read(STDIN, my $buffer, $ENV{'CONTENT_LENGTH'});
+    
+    # Split the name-value pairs
+    @pairs = split(/&/, $buffer);
+    # print "buffer is: $buffer\n";
+  }
+  else {
+    &error('request_method');
+  }
+  
+  foreach my $pair (@pairs) {
+    my ($name, $value) = split(/=/, $pair);
+    # Decode the form encoding on the name and value variables.
+    $name =~ tr/+/ /;
+    $name =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+    $name =~ tr/\0//d;
+    
+    $value =~ tr/+/ /;
+    $value =~ s/%([a-fA-F0-9][a-fA-F0-9])/pack("C", hex($1))/eg;
+    $value =~ tr/\0//d;
+
+    # Keep track of the required fields, to check later.
+    if ($name eq 'required') {
+      if ($required_fields eq '') {
+	$required_fields = "$value";
+      } 
+      else {
+	$required_fields .= ", $value";
+      }
+    }
+    # Put pairs into the hash %Form, appending the value with a ', ' 
+    # if there is already a value present.  We also preserve order of 
+    # the fields in the @Field_Order array.
+    if ($Form{$name} ne '') {
+      $Form{$name} .= ", $value";
+    }
+    else {
+      push(@Field_Order,$name);
+      $Form{$name} = $value;
+    }
+  }
+  
+  $required_fields =~ s/(\s+|\n)?,(\s+|\n)?/,/g;
+  $required_fields =~ s/(\s+)?\n+(\s+)?//g;
+  @Required = split(/,/,$required_fields);
+  
+}
+
+sub check_required {
+
+    # Variables used in this subroutine.                        #
+    my ($require, @error);
+
+    # For each require field defined in the form:                            #
+    foreach $require (@Required) {
+
+        # If the required field is the email field, the syntax of the email  #
+        # address if checked to make sure it passes a valid syntax.          #
+        if ($require eq 'email' && !&check_email($require)) {
+            push(@error,$require);
+        }
+
+        # If it is a regular form field which has not been filled in or      #
+        # filled in with a space, flag it as an error field.                 #
+	
+        elsif (!defined($Form{$require}) || $Form{$require} eq '') {
+            push(@error,$require);
+        }
+    }
+
+    # If any error fields have been found, send error message to the user.   #
+    if (@error) { &error('missing_fields', @error) }
+}
+
+sub check_email {
+    # Initialize local email variable with input to subroutine.              #
+    $email = $_[0];
+
+    # If the e-mail address contains:                                        #
+    if ($email =~ /(@.*@)|(\.\.)|(@\.)|(\.@)|(^\.)/ ||
+
+        # the e-mail address contains an invalid syntax.  Or, if the         #
+        # syntax does not match the following regular expression pattern     #
+        # it fails basic syntax verification.                                #
+
+        $email !~ /^.+\@(\[?)[a-zA-Z0-9\-\.]+\.([a-zA-Z0-9]+)(\]?)$/) {
+
+        # Basic syntax requires:  one or more characters before the @ sign,  #
+        # followed by an optional '[', then any number of letters, numbers,  #
+        # dashes or periods (valid domain/IP characters) ending in a period  #
+        # and then 2 or 3 letters (for domain suffixes) or 1 to 3 numbers    #
+        # (for IP addresses).  An ending bracket is also allowed as it is    #
+        # valid syntax to have an email address like: user@[255.255.255.0]   #
+
+        # Return a false value, since the e-mail address did not pass valid  #
+        # syntax.                                                            #
+        return 0;
+    }
+
+    else {
+
+        # Return a true value, e-mail verification passed.                   #
+        return 1;
+    }
+}
+
+# part of MyParse package  
+sub text {
+  my ($self, $text) = @_;
+  # print out the original text.
+  print MAIL $text;
+}
+
+# part of MyParse package  
+sub comment {
+  my ($self, $comment) = @_;
+  # do nothing, we don't need comments.
+}
+
+# part of MyParse package  
+sub start {
+  my ($self, $tag, $attr, $attrseq, $origtext) = @_;
+  
+  if($tag eq "input") {
+    unless ($attr->{'type'} eq 'hidden') {
+      # Ignore hidden attributes, build token for others. 
+      my %Input_Token = (
+			 name => "",
+			 type => "",
+			 size => "",
+			 value => "",
+			 checked => "no"
+			);
+      foreach my $key (%Input_Token) {
+	if ($key eq 'type') {
+	  # Get the type of attribute
+	  my $type = $attr->{$key};
+	  $Input_Token{$key} = $attr->{$key};
+	  	  
+	  if ($type eq 'radio') {
+	    # Decide whether to set checked
+	    if ($attr->{"value"} eq $Form{$attr->{"name"}}) {
+	      $Input_Token{"checked"} = "yes";
+	    }
+	  }
+	  elsif ($type eq 'checkbox') {
+	    # Decide whether to set checked
+	    my @checked = split(/, /, $Form{$attr->{"name"}});
+	    foreach my $box (@checked) {
+	      if ($box eq $attr->{"value"}) {
+		$Input_Token{"checked"} = "yes";
+	      }
+	    }
+	  }
+	}
+	elsif ($key eq 'value') {
+	  $Input_Token{$key} = $Form{$attr->{"name"}};
+	}
+	elsif ($key eq 'checked') {
+	  # Ignore default, do nothing.
+	  print MAIL "";
+	}
+	else {
+	  # Attribute is name or size
+	  $Input_Token{$key} = $attr->{$key};
+	}
+      }
+      my $token = "<$tag";
+      my $value_added = 0;
+
+      foreach my $seq (@{$attrseq}) {
+	unless ($seq eq 'checked') {
+	  # We will worry about checked a little later.
+	  $token .= qq( $seq="$Input_Token{$seq}");
+	}
+	if ($seq eq 'value'){
+	  $value_added = 1;
+	}
+      }
+      unless ($value_added) {
+	$token .= qq( value="$Input_Token{value}");
+      }
+      if ($Input_Token{"checked"} eq 'yes') {
+	$token .= " checked";
+      }
+      $token .= ">";
+      print MAIL $token;
+     }
+  }
+  elsif ($tag eq "textarea") {
+    # textarea stuff
+    print MAIL $origtext;
+    print MAIL $Form{$attr->{"name"}};
+  } 
+  elsif ($tag eq 'link' || $tag eq 'img') {
+    # Fix broken links
+    my $ref; 
+    if ($attr->{'href'}) {
+      $ref = $attr->{'href'};
+    }
+    else {
+      $ref = $attr->{'src'};
+    }
+    if ($ref =~ /^http:\/\//) {
+      print MAIL $origtext;
+    }
+    else {
+      my $full_ref;
+      # Strip off the part of the referer that gives us our path.
+      if ($url =~ /^((http:\/\/\S+\/)+)/) {
+	$full_ref = $1.$ref; 
+      }
+      my $link_token = "<$tag";
+      foreach my $seq (@{$attrseq}) {
+	if ($seq eq 'href' || $seq eq 'src') {
+	  $link_token .= qq( $seq="$full_ref");
+	}
+	else {
+	  $link_token .= qq( $seq="$attr->{$seq}");	
+	}
+      }
+      $link_token .= ">";
+      print MAIL $link_token;
+    }
+  } 
+  else {
+    # Don't save passwords, etc.
+    print MAIL $origtext;
+  }
+}
+
+# part of MyParse package  
+sub end {
+  my ($self, $tag, $origtext) = @_;
+  # print out original text
+  print MAIL $origtext;
+}
+
+sub error { 
+  my ($error) = @_;
+
+  print "Something went wrong!<br><br>";
+  if ($error eq 'bad_referer') {
+    print "If your browser has http referer logging disabled,",
+    " please enable it.<br><br>";
+  }
+  elsif ($error eq 'request_method') {
+    print "Invalid request method (i.e. not GET or POST).<br><br>";
+  }
+  elsif ($error eq 'missing_fields') {
+    print "The following fields need values:<br><br>";
+    
+    shift;
+    foreach (@_) {
+      print "$_<br>";
+    }
+    print "<br>Hit your browser's \'Back\' button and make sure all required ",
+    "form fields (marked with an asterisk) are filled in properly.<br><br>"
+  }
+  exit;
+}
+
+sub send_mail {
+#    my ($print_config,$key,$sort_order,$sorted_field,$env_report);
+    my $p = new MyParse;
+     # Open The Mail Program
+
+    print MAIL "To: $email\n";
+    print MAIL "From: $email ($recipient)\n";
+    print MAIL "CC: $cc_email ($cc_recipient)\n";
+    print MAIL "Subject: $subject\n";
+    print MAIL "MIME-Version: 1.0\n";
+    print MAIL qq(Content-Type: text/html; charset = "iso-8859-1"\n);
+    print MAIL qq(Content-Transfer-Encoding: 8bit\n\n);
+    print MAIL qq(<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">\n\n);
+    print MAIL "This form was submitted on ", $date, "<div><hr><hr>\n\n";
+
+    $p->parse($html);
+    $p->eof;
+
+  }
+
+# Check Referring URL, get date, process form, and send mail.
+&check_url;
+&get_date;
+&process_form;
+&check_required;
+&send_mail;
+
+if (close(MAIL)) {
+    print "Thank you for your submission.\n";
+} else {    
+        # print $! ? "Error closing sendmail pipe: $!"
+        #           : "Exit status $? from sendmail";
+    print "Sendmail failure: contact system administrator.\n";
+}
+exit;

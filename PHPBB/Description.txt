@@ -1,0 +1,16 @@
+http://www.hmc.edu/phpBB/phpBB2/index.php
+on improv.ac.hmc.edu (ssh):
+/usr/local/server/www/main/data/colrel/root/phpBB/phpBB2/config.php
+
+config.php should show something about password
+
+via mysql:
+
+$dbname = 'phpbb';
+$dbuser = 'root';
+$dbpasswd = 'tribute7';
+[sonya@Improv ~]$ mysql -u root -p phpbb
+table named phpbb_users
+
+write script to add to table from file formatted:
+username,password\n

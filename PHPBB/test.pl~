@@ -1,0 +1,15 @@
+#!/usr/bin/perl -w
+
+open(USERPASS,"<",$ARGV[0])||die("Cannot open file: $!");
+
+my ($username,$password);
+
+while(<USERSPASS>) {
+  chomp;
+  
+  if (/(\w+),(\w+)/)  {
+
+}
+
+close(USERPASS);
+exit;

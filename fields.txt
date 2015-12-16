@@ -1,0 +1,137 @@
+$masked_ref->{ss_no},
+            $masked_ref->{id},
+            $masked_ref->{lname},
+            $masked_ref->{fname},
+            $masked_ref->{mi},
+
+            $masked_ref->{perm_line1},
+            $masked_ref->{perm_line2},
+            $masked_ref->{perm_city},
+            $masked_ref->{perm_st},
+            $masked_ref->{perm_ctry},
+            $masked_ref->{perm_zip},
+            $masked_ref->{perm_zip4},
+            $masked_ref->{perm_phone},
+				'C', ## seconday addr destination
+				undef, ## secondary date of expiration
+            $masked_ref->{camp_line1},
+            $masked_ref->{camp_line2},
+				undef, ## campus city
+				undef, ## campus st
+				undef, ## campus country
+				undef, ## campus zip
+				undef, ## campus zip+4
+				$masked_ref->{camp_phone_ext},
+				$masked_ref->{eml1},
+				undef, ## birth date
+				undef, ## state of legal residence
+				undef, ## residency
+				undef, ## housing
+				undef, ## $masked_ref->{exp_grad_date}, -- moved to below
+				$masked_ref->{adm_stat}, ## admission status
+				undef, ## citizenship
+				undef, ## 2nd bach degree
+				undef, ##  title/gender
+				undef, ## vet status
+				$masked_ref->{hs_gpa}, ## high school gpa 
+				undef, ## college gpa
+				$masked_ref->{sat_verbal}, ## sat verbal
+				$masked_ref->{sat_math}, ## sat math
+				$masked_ref->{act_comp}, ## act composite
+				undef, ## satisfactory progress
+				undef, ## enrollment date
+				undef, ## credits/hours
+				undef, ## version
+				$masked_ref->{prog}, 
+				$masked_ref->{major1}, 
+				$masked_ref->{trnsfr}, 
+				undef, ## counselor
+				$masked_ref->{lv_date}, 
+				$masked_ref->{exp_grad_date}, ## expected graduation date
+				$masked_ref->{enr_date}, 
+				undef, ## from col 405-714
+				$masked_field_ids->{plan_grad_yr}, 
+				$masked_ref->{plan_grad_yr},
+				$masked_field_ids->{adm_yr}, 
+				$masked_ref->{adm_yr},
+				$masked_field_ids->{cum_gpa}, ## cumulative gpa field id
+				$masked_ref->{cum_gpa}, ## cumulative gpa
+				$masked_field_ids->{cur_enr_date}, ## odec field id
+				$masked_ref->{cur_enr_date},       ## odec
+				undef, # sdec field id, nuked
+				undef, # sdec, nuked
+				$masked_field_ids->{reg_hrs}, 
+				$masked_ref->{reg_hrs},
+				$masked_field_ids->{hs_rank}, 
+				$masked_ref->{hs_rank},
+				$masked_field_ids->{hs_size}, 
+				$masked_ref->{hs_size},
+				$masked_field_ids->{birth_date}, 
+				$masked_ref->{birth_date},
+				$masked_field_ids->{plan_enr_yr}, 
+				$masked_ref->{plan_enr_yr},
+				undef, ## cols 855-1274
+				$masked_field_ids->{pmt_terms},
+				$masked_ref->{pmt_terms},
+				$masked_field_ids->{sex},
+				$masked_ref->{sex},
+				$masked_field_ids->{nm_applicant},
+				$masked_ref->{nm_applicant},
+				$masked_field_ids->{adm_prog},
+				$masked_ref->{adm_prog},
+				$masked_field_ids->{res_asst},
+				$masked_ref->{res_asst},
+				undef, ## old adm_sess field id
+				undef, ## old adm_sess
+				undef, ## old class standing field id
+				undef, ## old class standing
+				undef, ## cols 1324-1414
+				$masked_field_ids->{adm_citz}, 
+				$masked_ref->{adm_citz},
+				$masked_field_ids->{ethnic_code1}, 
+				$masked_ref->{ethnic_code1},
+				$masked_field_ids->{ethnic_code2}, 
+				$masked_ref->{ethnic_code2},
+				$masked_field_ids->{ethnic_code3}, 
+				$masked_ref->{ethnic_code3},
+				$masked_field_ids->{ethnic_code4}, 
+				$masked_ref->{ethnic_code4},
+				$masked_field_ids->{fa}, 
+				$masked_ref->{fa},
+				$masked_field_ids->{early_decsn}, 
+				$masked_ref->{early_decsn},
+				$masked_field_ids->{fa_enr_stat}, 
+				$masked_ref->{fa_enr_stat},
+				$masked_field_ids->{fa_intend_hsg}, 
+				$masked_ref->{fa_intend_hsg},
+				$masked_field_ids->{hs_st}, 
+				$masked_ref->{hs_st},
+				$masked_field_ids->{odec}, 
+				$masked_ref->{odec},
+				$masked_field_ids->{total_score}, 
+				$masked_ref->{total_score},
+				$masked_field_ids->{sp_enr_stat}, 
+				$masked_ref->{sp_enr_stat},
+				$masked_field_ids->{sp_intend_hsg}, 
+				$masked_ref->{sp_intend_hsg},
+				$masked_field_ids->{cl},       ## class standing field id
+				$masked_ref->{cl},             ## class standing
+				$masked_field_ids->{adm_sess}, ## adm_sess field id
+				$masked_ref->{adm_sess},       ## adm_sess
+				$masked_field_ids->{ethnic_code}, ## ethnic code
+				$masked_ref->{ethnic_code},       ## ethnic code
+				$masked_field_ids->{first_gen}, ## first_gen field id
+				$masked_ref->{first_gen},       ## first_gen
+				$masked_field_ids->{cofhe},    ## cofhe field id
+				$masked_ref->{cofhe},          ## cofhe
+				$masked_field_ids->{cofhe_eth},    ## cofhe_eth field id
+				$masked_ref->{cofhe_eth},          ## cofhe_eth
+				undef,
+				undef,
+				undef,
+				undef,
+				$masked_ref->{citz},
+				undef || " ",
+				undef || " ",
+				$masked_ref->{athletic},
+				undef,
